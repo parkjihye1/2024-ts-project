@@ -50,5 +50,7 @@
   "devDependencies": {
     "@types/react-router-dom": "^5.3.3",
     "gh-pages": "^6.1.1"
-  }
+  },
+  "homepage": "https://parkjihye1.github.io/2024-ts-project/"
+
 }
