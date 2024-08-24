@@ -7,8 +7,8 @@ const containerStyle = {
 };
 
 const defaultCenter = {
-  lat: 37.5665, // Default latitude (Seoul)
-  lng: 126.9780, // Default longitude (Seoul)
+  lat: 37.5665, 
+  lng: 126.9780,
 };
 
 const Map: React.FC = () => {

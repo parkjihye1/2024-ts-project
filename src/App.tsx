@@ -1,15 +1,29 @@
-import React from 'react';
-import Planner from './components/Planner';
-import Header from './components/Header';
-import Logo from '../src/WanderWorldLogo.svg';
+import React, { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Home from './components/Home';
+import DateSelector from './components/DateSelector';
 
-function App() {
+const App: React.FC = () => {
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+
   return (
     <div>
-      <Header />
-    <div>
-      <Planner />
-    </div>
+      <Routes>
+        <Route 
+          path="/" 
+          element={<Home startDate={startDate} endDate={endDate} />} 
+        />
+        <Route 
+          path="/select-dates" 
+          element={
+            <DateSelector 
+              setStartDate={setStartDate} 
+              setEndDate={setEndDate} 
+            />
+          } 
+        />
+      </Routes>
     </div>
   );
 }
