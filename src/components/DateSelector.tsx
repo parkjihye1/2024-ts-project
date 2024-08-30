@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import moment from 'moment';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   StyledContainer, 
   StyledHeader,
@@ -10,7 +10,7 @@ import {
   StyledButtonWrapper, 
   StyledButton1,
   StyledButton2,     
-} from './styles';
+} from './date_styles';
 
 type Value = Date | [Date, Date];
 
@@ -21,9 +21,10 @@ interface DateSelectorProps {
 
 const DateSelector: React.FC<DateSelectorProps> = ({ setStartDate, setEndDate }) => {
   const today = new Date();
-  const [dateRange, setDateRange] = useState<Value>([today, today]);
   const [tempDateRange, setTempDateRange] = useState<Value>([today, today]);
   const navigate = useNavigate();
+  const location = useLocation();
+  const selectedLocation = location.state?.selectedLocation; 
 
   const handleDateChange = (value: Date | [Date, Date]) => {
     if (Array.isArray(value)) {
@@ -37,16 +38,19 @@ const DateSelector: React.FC<DateSelectorProps> = ({ setStartDate, setEndDate })
     if (Array.isArray(tempDateRange) && tempDateRange[0] && tempDateRange[1]) {
       setStartDate(tempDateRange[0]);
       setEndDate(tempDateRange[1]);
-      setDateRange(tempDateRange);
-      navigate('/');
+      navigate('/', { 
+        state: { 
+          selectedLocation: selectedLocation, 
+          startDate: tempDateRange[0], 
+          endDate: tempDateRange[1] 
+        } 
+      });
     }
   };
 
   const handleReset = () => {
     const resetDate: [Date, Date] = [today, today];
     setTempDateRange(resetDate);
-    setStartDate(today);
-    setEndDate(today);
   };
 
   return (
