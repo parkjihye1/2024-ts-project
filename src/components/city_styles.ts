@@ -6,7 +6,7 @@ export const StyledContainer = styled.div`
   align-items: center;
   justify-content: center;
   height: 100vh;
-  margin-top: -250px;
+  margin-top: -225px;
 `;
 
 export const StyledHeader = styled.div`

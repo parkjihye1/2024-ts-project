@@ -5,21 +5,17 @@ import Logo from '../images/TRAKPACK.svg';
 
 const StyledHeader = styled.div`
   display: flex;
-  margin-top: -35px;
-  margin-left: -40px;
-
-  @media (max-width: 600px) {
-    margin-top: -30px;
-    margin-left: -35px;
-  }
+  width: 100%;
+  height: 60px;
 `;
 
 const StyledLogo = styled.img`
-  width: 250px;
+  width: 100px;
   cursor: pointer;
+  margin-left: 40px;
 
   @media (max-width: 600px) {
-    width: 200px;
+    width: 90px;
   }
 `;
 
