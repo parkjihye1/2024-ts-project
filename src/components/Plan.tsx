@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { GoogleMap, Marker, useLoadScript, Libraries } from '@react-google-maps/api';
-import { FaTrash } from 'react-icons/fa';  // react-icons에서 FaTrash 임포트
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';  // react-beautiful-dnd에서 필요한 컴포넌트 임포트
+import { GoogleMap, Marker, useLoadScript, Libraries, Polyline } from '@react-google-maps/api';
+import { FaTrash } from 'react-icons/fa';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import NoImage from '../images/NoImages.svg';
-import CloseSchedulesIcon from '../images/CloseSchedules.svg';
-import OpenSchedulesIcon from '../images/OpenSchedules.svg';
 import {
   StyledContainer,
   TopPanel,
@@ -26,14 +24,14 @@ import {
   SchedulePanel,
   GoogleMapContainer,
   ViewToggleContainer,
-  ViewToggleButton,
   DeleteButtonContainer,
   DateHeading,
   DeleteButton,
   IconContainer,
   IconCircle,
+  ScheduleResult,
+  PlanItem,
 } from './plan_styles';
-
 
 const libraries: Libraries = ['places'];
 
@@ -73,8 +71,8 @@ const Plan: React.FC = () => {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [highlightedPlace, setHighlightedPlace] = useState<google.maps.places.PlaceResult | null>(null);
-  const [isScheduleOpen, setIsScheduleOpen] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<'all' | string>('all');
+  const [polylines, setPolylines] = useState<google.maps.Polyline[]>([]); // 폴리라인 상태
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY!,
@@ -186,10 +184,6 @@ const Plan: React.FC = () => {
     window.open(url, '_blank');
   };
 
-  const toggleSchedulePanel = () => {
-    setIsScheduleOpen(!isScheduleOpen);
-  };
-
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
     const updatedPlans = [...plans];
@@ -230,21 +224,16 @@ const Plan: React.FC = () => {
             index={planIndex}
           >
             {(provided) => (
-              <li
+              <PlanItem
                 ref={provided.innerRef}
                 {...provided.draggableProps}
                 {...provided.dragHandleProps}
                 style={{
                   ...provided.draggableProps.style,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '5px 0',
-                  paddingLeft: '30px',
                 }}
               >
                 <IconContainer>
-                  <IconCircle style={{ backgroundColor: dayColor }}>
+                  <IconCircle bgColor={dayColor}>
                     {planIndex + 1}
                   </IconCircle>
                 </IconContainer>
@@ -262,11 +251,61 @@ const Plan: React.FC = () => {
                     <FaTrash />
                   </DeleteButton>
                 </DeleteButtonContainer>
-              </li>
+              </PlanItem>
             )}
           </Draggable>
         );
       });
+  };
+
+  // Polyline을 그리는 함수
+  const getPolylines = (map: google.maps.Map | null) => {
+    // 기존 폴리라인을 제거
+    polylines.forEach(polyline => polyline.setMap(null));
+    setPolylines([]);
+
+    if (viewMode === 'all') {
+      // 모든 날짜의 Polyline을 그립니다.
+      availableDates.forEach((date, index) => {
+        const dayPlans = plans.filter(plan => plan.date === date);
+        if (dayPlans.length < 2) return; // 선을 그리기 위해서는 최소 2개의 포인트가 필요합니다.
+
+        const path = dayPlans.map(plan => ({
+          lat: plan.place.geometry!.location!.lat(),
+          lng: plan.place.geometry!.location!.lng(),
+        }));
+
+        const polyline = new google.maps.Polyline({
+          path,
+          strokeColor: dayColors[index % dayColors.length],
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+        });
+
+        polyline.setMap(map); // 새 폴리라인을 맵에 추가
+        setPolylines(prevPolylines => [...prevPolylines, polyline]); // 폴리라인 상태에 추가
+      });
+    } else {
+      // 특정 날짜의 Polyline을 그립니다.
+      const dayPlans = plans.filter(plan => plan.date === viewMode);
+      if (dayPlans.length < 2) return;
+
+      const dateIndex = availableDates.indexOf(viewMode);
+      const path = dayPlans.map(plan => ({
+        lat: plan.place.geometry!.location!.lat(),
+        lng: plan.place.geometry!.location!.lng(),
+      }));
+
+      const polyline = new google.maps.Polyline({
+        path,
+        strokeColor: dayColors[dateIndex % dayColors.length],
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+      });
+
+      polyline.setMap(map); // 새 폴리라인을 맵에 추가
+      setPolylines([polyline]); // 상태 업데이트
+    }
   };
 
   if (loadError) return <div>지도 로드에 실패했습니다.</div>;
@@ -296,20 +335,20 @@ const Plan: React.FC = () => {
             <ul>
               {places.length > 0 ? (
                 places.map((place, index) => (
-                  <PlaceItem key={index} onClick={() => handlePlaceClick(place)}>
+                  <PlaceItem key={index}>
                     <PlaceImage
                       src={getPhotoUrl(place)}
                       alt={place.name || 'No Image Available'}
                       onClick={() => handlePlaceClick(place)} 
                     />
                     <PlaceInfo>
-                      <PlaceName onClick={() => handlePlaceClick(place)}>{place.name}</PlaceName>
+                      <PlaceName onClick={() => handlePlaceClick(place)}>{place.name}</PlaceName> 
                       <PlaceAddress>{place.formatted_address}</PlaceAddress>
                       <AddButtonContainer>
                         {availableDates.map((date) => (
                           <AddButton
                             key={date}
-                            onClick={() => handleAddToPlan(place, date)}
+                            onClick={() => handleAddToPlan(place, date)} 
                           >
                             {new Date(date).getMonth() + 1}/
                             {new Date(date).getDate()}
@@ -326,56 +365,33 @@ const Plan: React.FC = () => {
           </SearchResultsWrapper>
         </SidePanel>
 
-        {/* 스케줄 패널이 열려 있을 때 닫기 아이콘 */}
-        {isScheduleOpen && (
-          <img
-            src={CloseSchedulesIcon}
-            onClick={toggleSchedulePanel}
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: 'calc(46% - 30px)',  // 스케줄 패널 오른쪽 바깥에 위치
-              transform: 'translateY(-50%)',
-              cursor: 'pointer',
-              zIndex: 1000,
-              width: '30px',
-              height: '30px',
-            }}
-            alt="Close Schedules"
-          />
-        )}
+        <SchedulePanel>
+          <ViewToggleContainer>
+            <select
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value)} // 선택된 값에 따라 viewMode 업데이트
+              style={{
+                padding: '8px',
+                fontSize: '16px',
+                borderRadius: '5px',
+                border: '1px solid #ccc',
+                appearance: 'none',
+                background: `url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-down'%3E%3Cpolyline points="6 9 12 15 18 9"%3E%3C/polyline%3E%3C/svg%3E') no-repeat right 10px center`,
+                backgroundColor: '#f9f9f9',
+                backgroundSize: '12px',
+              }}
+            >
+              <option value="all">전체</option>
 
-        {/* 스케줄 패널이 닫혀 있을 때 열기 아이콘 */}
-        {!isScheduleOpen && (
-          <img
-            src={OpenSchedulesIcon}
-            onClick={toggleSchedulePanel}
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: 'calc(23% - 8px)',  // 사이드 패널 오른쪽 바깥에 위치
-              transform: 'translateY(-50%)',
-              cursor: 'pointer',
-              zIndex: 1000,
-              width: '30px',
-              height: '30px',
-            }}
-            alt="Open Schedules"
-          />
-        )}
-
-        {isScheduleOpen && (
-          <SchedulePanel isOpen={isScheduleOpen}>
-            <ViewToggleContainer>
-              <ViewToggleButton active={viewMode === 'all'} onClick={() => setViewMode('all')}>
-                전체
-              </ViewToggleButton>
               {availableDates.map((date, index) => (
-                <ViewToggleButton key={date} active={viewMode === date} onClick={() => setViewMode(date)}>
+                <option key={date} value={date}>
                   {getFormattedDay(date, index)}
-                </ViewToggleButton>
+                </option>
               ))}
-            </ViewToggleContainer>
+            </select>
+          </ViewToggleContainer>
+
+          <ScheduleResult>
             <DragDropContext onDragEnd={handleDragEnd}>
               <Droppable droppableId="plans">
                 {(provided) => (
@@ -403,10 +419,10 @@ const Plan: React.FC = () => {
                 )}
               </Droppable>
             </DragDropContext>
-          </SchedulePanel>
-        )}
+          </ScheduleResult>
+        </SchedulePanel>
 
-        <GoogleMapContainer isScheduleOpen={isScheduleOpen}>
+        <GoogleMapContainer>
           <GoogleMap
             mapContainerStyle={{ width: '100%', height: '100%' }}
             zoom={12}
@@ -418,6 +434,7 @@ const Plan: React.FC = () => {
                   }
                 : selectedLocation || center
             }
+            onLoad={(map) => getPolylines(map)} // 폴리라인 업데이트
           >
             {highlightedPlace && (
               <Marker
