@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { cityList } from './cities';
+import { cityList } from './cities';  
 import {
     StyledContainer, 
     StyledHeader,

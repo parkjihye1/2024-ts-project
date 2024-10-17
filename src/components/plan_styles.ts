@@ -6,10 +6,10 @@ export const StyledContainer = styled.div`
   height: calc(100vh-60px);
 `;
 
-export const TopPanel = styled.div`
+export const TopPanel = styled.div`  
   width: 23%;
   height: 80px;
-  padding-top: 20px;
+  padding-top: 20px;  
   padding-left: 40px;
   display: flex;
   flex-direction: column;
@@ -34,13 +34,13 @@ export const MainContent = styled.div`
 
 export const SidePanel = styled.div`
   width: 23%;
+  min-width: 23%;
   height: calc(100vh - 140px);
   padding-left: 40px;
   padding-right: 40px;
   padding-top: 20px;
   display: flex;
   flex-direction: column;
-  background-color: red;
 `;
 
 export const SearchInputWrapper = styled.div`
@@ -50,11 +50,10 @@ export const SearchInputWrapper = styled.div`
   background-color: white;  
   padding-bottom: 5px;
   padding-top: 5px; 
-  padding-right: 20px; 
 `;
 
 export const SearchInput = styled.input`
-  width: 100%;
+  width: calc(100% - 10px);
   padding: 10px;
   box-sizing: border-box;
   font-size: 13px;
@@ -68,9 +67,10 @@ export const SearchResultsWrapper = styled.div`
   flex: 1;
   overflow-y: auto;
   margin-top: 10px;
+  
 
   &::-webkit-scrollbar {
-    width: 20px; 
+
   }
 
   &::-webkit-scrollbar-thumb {
@@ -106,6 +106,7 @@ export const PlaceInfo = styled.div`
   min-width: 0;
   margin-left: 15px;
   height: 80px; 
+  padding-right: 10px;
 `;
 
 export const PlaceName = styled.strong`
@@ -165,7 +166,6 @@ export const SchedulePanel =  styled.div`
   padding-top: 20px;
   padding-left: 40px;
   padding-right: 40px;
-  background-color: yellow;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -311,3 +311,4 @@ export const PlanItemText = styled.span`
   color: #333;
   flex: 1;
 `;
+

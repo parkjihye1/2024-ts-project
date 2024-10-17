@@ -4,6 +4,8 @@ import { GoogleMap, Marker, useLoadScript, Libraries, Polyline } from '@react-go
 import { FaTrash } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import NoImage from '../images/NoImages.svg';
+import CloseSchedules from '../images/CloseSchedules.svg';
+import OpenSchedules from '../images/OpenSchedules.svg';
 import {
   StyledContainer,
   TopPanel,

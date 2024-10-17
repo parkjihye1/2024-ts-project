@@ -5,7 +5,7 @@ export const StyledContainer = styled.div`
   flex-direction: column;
   align-items: center;
   padding: 20px;
-  margin-top: 70px;
+  margin-top: 70px;     
 `;
 
 export const CitySelectionButton = styled.button`
