@@ -22,7 +22,7 @@ import {
   PlaceName,
   PlaceAddress,
   AddButtonContainer,
-  AddButton,
+  DateSelectButton,
   SchedulePanel,
   GoogleMapContainer,
   ViewToggleContainer,
@@ -33,7 +33,20 @@ import {
   IconCircle,
   ScheduleResult,
   PlanItem,
+  PlanOuterItem,
 } from './plan_styles';
+
+// Modal 관련 스타일
+import {
+  ModalOverlay,
+  ModalWrapper,
+  ModalContent,
+  ModalButtonContainer,
+  ModalButton,
+  DateButtonList,
+  DateButtonItem,
+  DateButton,
+} from './modal_styles'; // 모달 창 스타일을 별도로 관리할 경우
 
 const libraries: Libraries = ['places'];
 
@@ -62,6 +75,60 @@ interface PlanItem {
   place: google.maps.places.PlaceResult;
 }
 
+interface DateModalProps {
+  availableDates: string[];
+  onSelectDate: (date: string) => void;
+  onClose: () => void;
+}
+
+// DateModal 컴포넌트의 올바른 정의
+const DateModal: React.FC<DateModalProps> = ({ availableDates, onSelectDate, onClose }) => {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null); // 선택된 날짜 상태
+
+  const handleDateClick = (date: string) => {
+    setSelectedDate(date); // 선택된 날짜 설정
+  };
+
+  const handleConfirm = () => {
+    if (selectedDate) {
+      onSelectDate(selectedDate); // 선택된 날짜를 부모 컴포넌트에 전달
+      onClose(); // 모달 닫기
+    } else {
+      alert('날짜를 선택하세요!'); // 선택된 날짜가 없을 경우 경고
+    }
+  };
+
+  const handleCancel = () => {
+    onClose(); // 취소 버튼 클릭 시 모달만 닫기
+  };
+
+  return (
+    <ModalOverlay>
+      <ModalWrapper>
+        <ModalContent>
+          <h3>날짜를 선택해보세요!</h3>
+          <DateButtonList>
+            {availableDates.map((date) => (
+              <DateButtonItem key={date}>
+                <DateButton
+                  isSelected={selectedDate === date} // 선택된 상태인지 확인
+                  onClick={() => handleDateClick(date)}
+                >
+                  {new Date(date).getMonth() + 1}/{new Date(date).getDate()}
+                </DateButton>
+              </DateButtonItem>
+            ))}
+          </DateButtonList>
+          <ModalButtonContainer>
+            <ModalButton onClick={handleCancel}>취소</ModalButton>
+            <ModalButton onClick={handleConfirm}>확인</ModalButton>
+          </ModalButtonContainer>
+        </ModalContent>
+      </ModalWrapper>
+    </ModalOverlay>
+  );
+};
+
 const Plan: React.FC = () => {
   const location = useLocation() as { state: LocationState };
   const selectedLocation = location.state?.selectedLocation;
@@ -71,6 +138,8 @@ const Plan: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [places, setPlaces] = useState<google.maps.places.PlaceResult[]>([]);
   const [plans, setPlans] = useState<PlanItem[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false); // 모달 상태
+  const [selectedPlace, setSelectedPlace] = useState<google.maps.places.PlaceResult | null>(null); // 선택된 장소
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [highlightedPlace, setHighlightedPlace] = useState<google.maps.places.PlaceResult | null>(null);
   const [viewMode, setViewMode] = useState<'all' | string>('all');
@@ -226,7 +295,7 @@ const Plan: React.FC = () => {
             index={planIndex}
           >
             {(provided) => (
-              <PlanItem
+              <PlanOuterItem // Wrapping PlanItem with PlanOuterItem
                 ref={provided.innerRef}
                 {...provided.draggableProps}
                 {...provided.dragHandleProps}
@@ -234,43 +303,43 @@ const Plan: React.FC = () => {
                   ...provided.draggableProps.style,
                 }}
               >
-                <IconContainer>
-                  <IconCircle bgColor={dayColor}>
-                    {planIndex + 1}
-                  </IconCircle>
-                </IconContainer>
-                <span>{plan.place.name}</span>
-                <DeleteButtonContainer>
-                  <DeleteButton
-                    onClick={() => handleDeletePlan(
-                      plans.findIndex(
-                        (p) =>
-                          p.date === date &&
-                          p.place.place_id === plan.place.place_id
-                      )
-                    )}
-                  >
-                    <FaTrash />
-                  </DeleteButton>
-                </DeleteButtonContainer>
-              </PlanItem>
+                <PlanItem>
+                  <IconContainer>
+                    <IconCircle bgColor={dayColor}>
+                      {planIndex + 1}
+                    </IconCircle>
+                  </IconContainer>
+                  <span>{plan.place.name}</span>
+                  <DeleteButtonContainer>
+                    <DeleteButton
+                      onClick={() => handleDeletePlan(
+                        plans.findIndex(
+                          (p) =>
+                            p.date === date &&
+                            p.place.place_id === plan.place.place_id
+                        )
+                      )}
+                    >
+                      <FaTrash />
+                    </DeleteButton>
+                  </DeleteButtonContainer>
+                </PlanItem>
+              </PlanOuterItem>
             )}
           </Draggable>
         );
       });
   };
+  
 
-  // Polyline을 그리는 함수
   const getPolylines = (map: google.maps.Map | null) => {
-    // 기존 폴리라인을 제거
     polylines.forEach(polyline => polyline.setMap(null));
     setPolylines([]);
 
     if (viewMode === 'all') {
-      // 모든 날짜의 Polyline을 그립니다.
       availableDates.forEach((date, index) => {
         const dayPlans = plans.filter(plan => plan.date === date);
-        if (dayPlans.length < 2) return; // 선을 그리기 위해서는 최소 2개의 포인트가 필요합니다.
+        if (dayPlans.length < 2) return;
 
         const path = dayPlans.map(plan => ({
           lat: plan.place.geometry!.location!.lat(),
@@ -284,11 +353,10 @@ const Plan: React.FC = () => {
           strokeWeight: 2,
         });
 
-        polyline.setMap(map); // 새 폴리라인을 맵에 추가
-        setPolylines(prevPolylines => [...prevPolylines, polyline]); // 폴리라인 상태에 추가
+        polyline.setMap(map);
+        setPolylines(prevPolylines => [...prevPolylines, polyline]);
       });
     } else {
-      // 특정 날짜의 Polyline을 그립니다.
       const dayPlans = plans.filter(plan => plan.date === viewMode);
       if (dayPlans.length < 2) return;
 
@@ -305,9 +373,28 @@ const Plan: React.FC = () => {
         strokeWeight: 2,
       });
 
-      polyline.setMap(map); // 새 폴리라인을 맵에 추가
-      setPolylines([polyline]); // 상태 업데이트
+      polyline.setMap(map);
+      setPolylines([polyline]);
     }
+  };
+
+  // 모달 창 열기 함수
+  const openDateModal = (place: google.maps.places.PlaceResult) => {
+    setSelectedPlace(place);
+    setIsModalOpen(true); // 모달 열기
+  };
+
+  // 모달 창 닫기 함수
+  const closeDateModal = () => {
+    setIsModalOpen(false); // 모달 닫기
+  };
+
+  // 날짜 선택 시 처리
+  const handleDateSelect = (date: string) => {
+    if (selectedPlace) {
+      handleAddToPlan(selectedPlace, date);
+    }
+    closeDateModal();
   };
 
   if (loadError) return <div>지도 로드에 실패했습니다.</div>;
@@ -315,6 +402,15 @@ const Plan: React.FC = () => {
 
   return (
     <StyledContainer>
+      {/* 모달 창 */}
+      {isModalOpen && (
+        <DateModal
+          availableDates={availableDates}
+          onSelectDate={handleDateSelect}
+          onClose={closeDateModal}
+        />
+      )}
+
       <TopPanel>
         <LocationName>{selectedLocation?.name}</LocationName>
         <DateRange>
@@ -347,16 +443,11 @@ const Plan: React.FC = () => {
                       <PlaceName onClick={() => handlePlaceClick(place)}>{place.name}</PlaceName> 
                       <PlaceAddress>{place.formatted_address}</PlaceAddress>
                       <AddButtonContainer>
-                        {availableDates.map((date) => (
-                          <AddButton
-                            key={date}
-                            onClick={() => handleAddToPlan(place, date)} 
-                          >
-                            {new Date(date).getMonth() + 1}/
-                            {new Date(date).getDate()}
-                          </AddButton>
-                        ))}
+                        <DateSelectButton onClick={() => openDateModal(place)}>
+                          날짜 선택
+                        </DateSelectButton>
                       </AddButtonContainer>
+
                     </PlaceInfo>
                   </PlaceItem>
                 ))
@@ -371,7 +462,7 @@ const Plan: React.FC = () => {
           <ViewToggleContainer>
             <select
               value={viewMode}
-              onChange={(e) => setViewMode(e.target.value)} // 선택된 값에 따라 viewMode 업데이트
+              onChange={(e) => setViewMode(e.target.value)} 
               style={{
                 padding: '8px',
                 fontSize: '16px',
@@ -436,7 +527,7 @@ const Plan: React.FC = () => {
                   }
                 : selectedLocation || center
             }
-            onLoad={(map) => getPolylines(map)} // 폴리라인 업데이트
+            onLoad={(map) => getPolylines(map)} 
           >
             {highlightedPlace && (
               <Marker
